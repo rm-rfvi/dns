@@ -1,0 +1,2 @@
+# dns
+dockarr dns service

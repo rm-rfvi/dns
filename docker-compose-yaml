@@ -1,5 +1,5 @@
-version: '3.8'
-
+---
+version: "3.8"
 volumes:
   vol_pihole:
     driver: local
@@ -13,118 +13,74 @@ volumes:
       type: none
       device: /opt/docker/run/pihole/etc-dnsmasq.d
       o: bind
-  vol_portainer:
-    driver: local
-    driver_opts:
-      type: none
-      device: /opt/docker/run/portainer/data
-      o: bind
-
 services:
   pihole:
     container_name: pihole
-    image: pihole/pihole:latest
+    hostname: pihole
+    restart: always
+    image: pihole/pihole
+    networks:
+      dns:
+        ipv4_address: 172.20.0.9
+    depends_on:
+      google-8.8.8.8:
+        condition: service_started
+      cloudflare-1.1.1.1:
+        condition: service_started
     volumes:
-      - /etc/localtime:/etc/localtime:ro
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - /etc/timezone:/etc/timezone:ro
       - vol_pihole:/etc/pihole/
       - vol_dnsmasq:/etc/dnsmasq.d/
-    cap_add:
-      - NET_ADMIN
-    restart: always
+      - /etc/localtime:/etc/localtime
+    ports:
+      - 7003:80
+      - 5353:53/tcp
+      - 5353:53/udp
+    environment:
+      - ServerIP=127.0.0.1
+      - WEBPASSWORD="password" #please at least read this line.  change your password.
+      - PIHOLE_DNS_=172.20.0.10;172.20.0.12
     labels:
-      - "com.centurylinklabs.watchtower.enable=true"
-
-  dns_1:
-    container_name: dns_1
-    image: qmcgaw/dns
+      - com.centurylinklabs.watchtower.enable=true
+ cloudflare-1.1.1.1:
+    container_name: cloudflare-1.1.1.1
+    hostname: cloudflare-1.1.1.1
+    restart: always
+    image: visibilityspots/cloudflared
     networks:
-      dns_net:
-        aliases:
-          - dns
+      dns:
+        ipv4_address: 172.20.0.10
+    expose:
+      - 53/tcp
+      - 53/udp
     environment:
-      - VERBOSITY=1
-      - VERBOSITY_DETAILS=0
-      - BLOCK_MALICIOUS=on
-      - BLOCK_SURVEILLANCE=on
-      - BLOCK_ADS=off
-      - BLOCK_IPS=
-      - BLOCK_HOSTNAMES=
-      - UNBLOCK=
-      - PROVIDERS=cloudflare,quad9
-      - UPDATE_PERIOD=24h
-    ports:
-      - "8053:53/tcp"
-      - "8053:53/udp"
-    restart: always
-
-  dns_2:
-    container_name: dns_2
-    image: qmcgaw/dns
-    networks:
-      dns_net:
-        aliases:
-          - dns
-    environment:
-      - VERBOSITY=1
-      - VERBOSITY_DETAILS=0
-      - BLOCK_MALICIOUS=on
-      - BLOCK_SURVEILLANCE=on
-      - BLOCK_ADS=off
-      - BLOCK_IPS=
-      - BLOCK_HOSTNAMES=
-      - UNBLOCK=
-      - PROVIDERS=cloudflare,quad9
-      - UPDATE_PERIOD=24h
-    ports:
-      - "9053:53/tcp"
-      - "9053:53/udp"
-    restart: always
-
-  watchtower:
-    container_name: watchtower
-    image: containrrr/watchtower:latest
+      - PORT=53
+      - UPSTREAM1=https://1.1.1.1/dns-query
+      - UPSTREAM2=https://1.1.1.1/dns-query
     volumes:
-      - /etc/localtime:/etc/localtime:ro
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - /etc/timezone:/etc/timezone:ro
-    environment:
-      - PUID=1000
-      - PGID=1000
-      - TZ=Australia/Adelaide
-      - UMASK_SET=022 #optional
-      - WATCHTOWER_CLEANUP=true
-    restart: always
-
-  portainer:
-    container_name: portainer
-    image: portainer/portainer-ce:latest
-    command: -H unix:///var/run/docker.sock
-    environment:
-      - PUID=1000
-      - PGID=1000
-      - TZ=Australia/Adelaide
-      - UMASK_SET=022 #optional
-    volumes:
-      - /etc/localtime:/etc/localtime:ro
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - /etc/timezone:/etc/timezone:ro
-      - vol_portainer:/data
-    ports:
-      - '9000:9000'
-    restart: always
+      - /etc/localtime:/etc/localtime
     labels:
-      - "com.centurylinklabs.watchtower.enable=true"
-
+      - com.centurylinklabs.watchtower.enable=true
+  google-8.8.8.8:
+    container_name: google-8.8.8.8
+    hostname: google-8.8.8.8
+    restart: always
+    image: visibilityspots/cloudflared
+    networks:
+      dns:
+        ipv4_address: 172.20.0.12
+    expose:
+      - 53/tcp
+      - 53/udp
+    environment:
+      - PORT=53
+      - UPSTREAM1=https://8.8.8.8/dns-query
+      - UPSTREAM2=https://8.8.4.4/dns-query
+    volumes:
+      - /etc/localtime:/etc/localtime
+    labels:
+      - com.centurylinklabs.watchtower.enable=true
 networks:
-  dns_net:
+  dns:
     ipam:
       config:
-        - subnet: 172.28.5.0/24
-
-  pihole_net:
-    ipam:
-      config:
-        - subnet: 172.29.5.0/24
-
+        - subnet: 172.20.0.0/24

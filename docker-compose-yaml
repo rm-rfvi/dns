@@ -33,15 +33,16 @@ services:
       - /etc/localtime:/etc/localtime
     ports:
       - 7003:80
-      - 5353:53/tcp
-      - 5353:53/udp
+      - 53:53/tcp
+      - 53:53/udp
     environment:
       - ServerIP=127.0.0.1
-      - WEBPASSWORD="password" #please at least read this line.  change your password.
+      - WEBPASSWORD="password"
       - PIHOLE_DNS_=172.20.0.10;172.20.0.12
+      - PIHOLE_EXTRA_ENV=setenv.add-response-header = ("Access-Control-Allow-Origin" => "*")
     labels:
       - com.centurylinklabs.watchtower.enable=true
- cloudflare-1.1.1.1:
+  cloudflare-1.1.1.1:
     container_name: cloudflare-1.1.1.1
     hostname: cloudflare-1.1.1.1
     restart: always

@@ -21,4 +21,4 @@ chown -R 999:999 /opt/docker/run/pihole/etc-dnsmasq.d
 chmod 644 /opt/docker/run/pihole/etc-dnsmasq.d/01-pihole.conf
 
 systemctl disable systemd-resolved.service
-systemd stop systemd-resolved
+systemctl stop systemd-resolved.service
